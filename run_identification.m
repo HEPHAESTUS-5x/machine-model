@@ -12,10 +12,10 @@ clear; clc; close all;
 
 %% ---------------- SETTINGS (edit) ----------------
 mdl      = 'multibody_model';                         % <<< model name
-sigNames = {'pos_x', 'vel_x'};                            % <<< logged signals in the model
-measCols = {'pos_x', 'vel_x'};                            % <<< matching columns in feedback.csv
-free     = {'f_m_x','f_k_x','f_c_x','f_Fc_x','f_bv_x'};   % <<< multipliers estimated in THIS stage
-nomNames = {'m_x0','k_x0','c_x0','Fc_x0','bv_x0'};        % <<< their nominal values (same order)
+sigNames = {'pos_x','pos_y','pos_z','pos_a','pos_c','vel_x','vel_y','vel_z','vel_a','vel_c'};                           % <<< logged signals in the model
+measCols = sigNames;                            % <<< matching columns in feedback.csv
+free     = {'f_m_y','f_k_y'};   % <<< multipliers estimated in THIS stage
+nomNames = {'m_y0','k_y0'};        % <<< their nominal values (same order)
 lb = 0.3;  ub = 3;                                        % bounds on the multipliers
 win = [0 inf];                  % time window [s] used in the cost (e.g. friction part only)
 zeroStart = true;               % subtract the initial value from the measured signals
