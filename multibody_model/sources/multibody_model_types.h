@@ -1,7 +1,0 @@
-#ifndef multibody_model_types_h_
-#define multibody_model_types_h_
-
-typedef struct P_multibody_model_T_ P_multibody_model_T;
-typedef struct tag_RTM_multibody_model_T RT_MODEL_multibody_model_T;
-
-#endif

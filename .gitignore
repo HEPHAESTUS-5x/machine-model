@@ -1,1 +1,23 @@
+# Simulink / MATLAB caches, autosaves and backups (regenerated or local only)
 slprj/
+*.slxc
+*.asv
+*.autosave
+*.slx.bak*
+*.slx.r20*
+*.slx.original
+*.mex*
+codegen/
+
+# Generated outputs
+fmu_test/
+*.fmu
+*.log
+*.mp4
+identified_params_2*.m
+ident_rigid_*.fig
+ident_sim_*.fig
+data_synthetic/
+
+# Files waiting to be deleted by hand (cleanup_machine_model.sh)
+_to_delete/

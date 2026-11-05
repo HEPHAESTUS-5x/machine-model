@@ -1,8 +1,0 @@
-#include "multibody_model_macros.h"
-#include "pm_std.h"
-void ssc_sli_FX7FChzuFX4Biixgn3OEzf(boolean_T mc__BdKVTewIl8TaXwgBW0hvv);
-boolean_T ssc_sli_kwtDeOvAda_EfXhwWFZ_JL(void);static boolean_T
-ssc_sli_FrbzLLEqfxGFe56uCIRhvp=false;void ssc_sli_FX7FChzuFX4Biixgn3OEzf(
-boolean_T mc__BdKVTewIl8TaXwgBW0hvv){ssc_sli_FrbzLLEqfxGFe56uCIRhvp=
-mc__BdKVTewIl8TaXwgBW0hvv;}boolean_T ssc_sli_kwtDeOvAda_EfXhwWFZ_JL(void){
-return ssc_sli_FrbzLLEqfxGFe56uCIRhvp;}

@@ -41,3 +41,17 @@ m_z = m_z0*f_m_z;   k_z = k_z0*f_k_z;   c_z = c_z0*f_c_z;
 m_x = m_x0*f_m_x;   k_x = k_x0*f_k_x;   c_x = c_x0*f_c_x;
 J_a = J_a0*f_J_a;   k_a = k_a0*f_k_a;   c_a = c_a0*f_c_a;
 J_c = J_c0*f_J_c;   k_c = k_c0*f_k_c;   c_c = c_c0*f_c_c;
+
+%% ---------------- Added for the identification (ident_config / fix_model_for_ident) ----------------
+% Placeholders, overwritten by identified_params_latest.m once ident_rigid has run.
+% X and Z friction (Translational Friction blocks, enabled by fix_model_for_ident)
+Fc_x = 200;   Fb_x = 1.2*Fc_x;   bv_x = 1000;   vbrk_x = 2e-3;
+Fc_z = 200;   Fb_z = 1.2*Fc_z;   vb_z = 1000;   vbrk_z = 2e-3;
+% Z gravity as its own force: m_z also holds the reflected rotor inertia
+Fg_z = m_z*9.81;
+% A and C friction (Rotational Friction blocks added by fix_model_for_ident)
+Tc_a = 5;     Tb_a = 1.2*Tc_a;   bv_a = 1;      vbrk_a = 0.01;
+Tc_c = 5;     Tb_c = 1.2*Tc_c;   bv_c = 1;      vbrk_c = 0.01;
+% A gravity: motor torque needed = G_a*sin(a); the model's Gain4 is -G_a
+% (2.94 = the value Gain4 had before fix_model_for_ident; = m_plate*9.81*l_cg)
+G_a = 2.94;
