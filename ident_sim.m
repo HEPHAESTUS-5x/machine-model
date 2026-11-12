@@ -22,13 +22,20 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
-mdl = 'machine_y';            % <<< machine_x, machine_y or machine_z
+% mdls = {'machine_x', 'machine_y', 'machine_z'};   % <<< models to refine, one after the other
+mdls = 'machine_x'
 
 cfg = ident_config();
+for im = 1:numel(mdls)
+mdl = mdls{im};
+fprintf('\n=============== %s ===============\n', mdl);
 M   = cfg.sim.models(strcmp({cfg.sim.models.name}, mdl));
 if isempty(M), error('ident:sim', 'no entry for %s in cfg.sim.models', mdl); end
 stamp = datestr(now, 'yyyymmdd_HHMM'); %#ok<TNOW1,DATST>
 
+% init_params first (defines EVERY variable the model uses, also the ones that are not
+% identified: k, c, A and C inertias...), then the identified values override the
+% placeholders. Re-read at each model, so Y starts from what X just wrote.
 init_params;
 if exist('identified_params_latest.m', 'file')
     identified_params_latest;
@@ -53,17 +60,21 @@ for j = 1:numel(Ax)
     if strcmp(Ax(j).kind, 'lin'), su(j) = cfg.unit.lin; else, su(j) = cfg.unit.rot; end
 end
 
-X = struct('name', {}, 'use', {}, 'u', {}, 't', {}, 'vm', {}, 'pm', {}, 'scale', {}, 'h1', {});
+X = struct('name', {}, 'use', {}, 'u', {}, 't', {}, 'vm', {}, 'pm', {}, 'scale', {}, 'h1', {}, 'has', {});
 for e = 1:numel(D)
-    if ~all(D(e).has(axIdx)), continue; end
+    has = D(e).has(axIdx);                 % axes of this model recorded in this file
+    if ~any(has), continue; end            % an axis that was not recorded (e.g. A, C while X moves)
     [~, h1] = ident_sg_kernels(cfg.filt.order, cfg.filt.frame, D(e).Ts);
     P = D(e).pos(:, axIdx);
+    T = D(e).tau(:, axIdx);
+    P(:, ~has) = 0;                        % ... gets no torque and is not compared
+    T(:, ~has) = 0;
     V = zeros(size(P));
-    for j = 1:numel(axIdx)
+    for j = find(has)
         V(:, j) = ident_filt(h1, P(:, j));
     end
-    if ~any(any(abs(V) > vmin)), continue; end           % none of these axes moves
-    rest = all(abs(V) < vmin | isnan(V), 2);
+    if ~any(any(abs(V(:, has)) > vmin(has))), continue; end   % none of the recorded axes moves
+    rest = all(abs(V(:, has)) < vmin(has) | isnan(V(:, has)), 2);
     k0   = find(movsum(rest, [0 49]) == 50, 1);          % 50 samples at rest
     if isempty(k0)
         warning('ident:sim', '%s: never at rest, skipped', D(e).name);
@@ -71,15 +82,22 @@ for e = 1:numel(D)
     end
     kk = (k0:numel(D(e).t)).';
     t  = D(e).t(kk) - D(e).t(k0);
-    X(end+1) = struct('name', D(e).name, 'use', D(e).use, 'u', [t, D(e).tau(kk, axIdx)], 't', t, ...
+    X(end+1) = struct('name', D(e).name, 'use', D(e).use, 'u', [t, T(kk, :)], 't', t, ...
         'vm', V(kk, :), 'pm', P(kk, :) - P(k0, :), ...
-        'scale', max(std(V(kk, :), 0, 1, 'omitnan'), 100 * vmin), 'h1', h1); %#ok<SAGROW>
+        'scale', max(std(V(kk, :), 0, 1, 'omitnan'), 100 * vmin), 'h1', h1, 'has', has); %#ok<SAGROW>
 end
-if isempty(X), error('ident:sim', 'no recording where the axes of %s move', mdl); end
+if isempty(X)
+    warning('ident:sim', 'no recording where the axes of %s move: skipped', mdl);
+    continue
+end
 isFit = strcmp({X.use}, 'fit');
-if ~any(isFit), error('ident:sim', 'all the recordings of %s are marked ''val''', mdl); end
+if ~any(isFit)
+    warning('ident:sim', 'all the recordings of %s are marked ''val'': skipped', mdl);
+    continue
+end
 fprintf('%s: %d recordings for the fit, %d for validation\n', mdl, nnz(isFit), nnz(~isFit));
 
+clear ctx
 ctx.mdl    = mdl;
 ctx.free   = free;
 ctx.base   = base;
@@ -122,10 +140,12 @@ ctx.X = X;
 [~, simA] = resFcn(x, ctx);
 for e = 1:numel(X)
     f = figure('Name', sprintf('%s %s (%s)', mdl, X(e).name, X(e).use));
-    na = numel(Ax);
-    for j = 1:na
+    jj = find(X(e).has);
+    na = numel(jj);
+    for jn = 1:na
+        j = jj(jn);
         if strcmp(Ax(j).kind, 'lin'), vk = 6e4; vu = 'mm/min'; else, vk = 60 * 180 / pi; vu = 'deg/min'; end
-        subplot(na, 1, j);
+        subplot(na, 1, jn);
         plot(X(e).t, X(e).vm(:, j) * vk, X(e).t, simB{e}.Vs(:, j) * vk, X(e).t, simA{e}.Vs(:, j) * vk);
         grid on;
         ylabel(sprintf('v_%s [%s]', Ax(j).name, vu));
@@ -133,11 +153,12 @@ for e = 1:numel(X)
         eA = rms_nan(simA{e}.Vs(:, j) - X(e).vm(:, j)) * vk;
         title(sprintf('%s (%s), axis %s: rms error %.4g -> %.4g %s', X(e).name, X(e).use, ...
             upper(Ax(j).name), eB, eA, vu), 'Interpreter', 'none');
-        if j == 1, legend('measured', 'before', 'after'); end
+        if jn == 1, legend('measured', 'before', 'after'); end
     end
     xlabel('t [s]');
     savefig(f, sprintf('ident_sim_%s_%s_%s.fig', mdl, X(e).name, stamp));
 end
+end   % models
 
 % =====================================================================
 function [r, sims] = resFcn(s, c)
@@ -147,7 +168,8 @@ for e = 1:numel(c.X)
     E  = c.X(e);
     in = Simulink.SimulationInput(c.mdl);
     in = in.setExternalInput(E.u);
-    in = in.setModelParameter('StopTime', num2str(E.t(end)), 'LoadExternalInput', 'on', ...
+    % setExternalInput already switches LoadExternalInput on: do not set it again
+    in = in.setModelParameter('StopTime', num2str(E.t(end)), ...
         'SaveOutput', 'on', 'OutputSaveName', 'yout', 'SaveFormat', 'Dataset');
     for i = 1:numel(c.free)
         in = in.setVariable(c.free{i}, s(i) * c.base(i));
@@ -179,7 +201,7 @@ for e = 1:numel(c.X)
     for j = 1:np
         Vs(:, j) = ident_filt(E.h1, Ps(:, j));
     end
-    for j = 1:np
+    for j = find(E.has)
         ev = (Vs(:, j) - E.vm(:, j)) / E.scale(j);
         ev(~isfinite(ev)) = 0;
         r = [r; ev]; %#ok<AGROW>

@@ -26,7 +26,14 @@ else
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_FRIC_1.csv', 'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_DYN_1.csv',  'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_VAL_1.csv',  'feedback', '', 'use', 'val');
-    cfg.data(end+1) = struct('torque', 'data/IDEN_X_1.csv',      'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_1.csv',      'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_FRIC_1.csv', 'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_DYN_1.csv',  'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_VAL_1.csv',  'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_1.csv',      'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Z_FRIC_1.csv', 'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Z_DYN_1.csv',  'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_Z_VAL_1.csv',  'feedback', '', 'use', 'val');
     % one line per recording (keep the CSVs in data/), e.g.
     % cfg.data(end+1) = struct('torque', 'data/IDENT_Y_1_torque.csv', 'feedback', 'data/IDENT_Y_1_feedback.csv', 'use', 'fit');
     % cfg.data(end+1) = struct('torque', 'data/IDENT_Y_2_torque.csv', 'feedback', 'data/IDENT_Y_2_feedback.csv', 'use', 'val');
@@ -56,8 +63,10 @@ cfg.rigid.outlier      = 5;     % residuals beyond this many robust sigmas are d
 
 %% ---------------- Axes ----------------
 % r = load displacement per motor radian IN THE SIMSCAPE MODEL [m/rad or rad/rad].
-%   X, Y : Gear Box ratio 27, then Wheel and Axle R = 6.36 mm  ->  r = 6.36e-3/27
-%   Z    : no gear, Leadscrew lead 8 mm                         ->  r = 0.008/(2*pi)
+%   X, Y, Z : ball screw, lead 20 mm (MD31030), gear 1/1 (MD31050/31060)  ->  r = 0.020/(2*pi)
+%             read on the machine 2026-11-12; MD32000 = 40000 mm/min = 2000 rpm, MD32100 = -1
+%             THE SIMSCAPE MODELS MUST USE THE SAME r: X, Y: Gear Box ratio 1 and Wheel and Axle R = 20/(2*pi) mm;
+%             Z: Leadscrew lead 20 mm.
 %   A, C : the motor torque acts directly on the inertia        ->  r = 1
 % r converts the fitted coefficients (motor torque per unit of load motion)
 % into the parameters of the blocks. It must match the MODEL. Check the model
@@ -74,13 +83,14 @@ cfg.rigid.outlier      = 5;     % residuals beyond this many robust sigmas are d
 %   vbrk  breakaway velocity                 offset constant force (gravity on Z)
 %   gsin, gcos  gravity torque coefficients (A); the model applies -G_a*sin(a)
 % reset: multipliers set back to 1, because the nominal now holds the identified value.
+r_screw = 0.020/(2*pi);   % [m/rad] ball screw lead 20 mm, direct drive (same on X, Y, Z)
 cfg.axes = [ ...
-    axis_def('x', 'lin', 'tau_x', 'pos_x', 6.36e-3/27, 'none', ...
+    axis_def('x', 'lin', 'tau_x', 'pos_x', r_screw, 'none', ...
         struct('mass', 'm_x', 'Fc', 'Fc_x', 'Fbrk', 'Fb_x', 'visc', 'bv_x', 'vbrk', 'vbrk_x', 'offset', 'F0_x'), {}), ...
-    axis_def('y', 'lin', 'tau_y', 'pos_y', 6.36e-3/27, 'none', ...
+    axis_def('y', 'lin', 'tau_y', 'pos_y', r_screw, 'none', ...
         struct('mass', 'm_y0', 'Fc', 'Fc_y0', 'dFb', 'dFb_y0', 'visc', 'vb_y0', 'vbrk', 'vbrk_y', 'offset', 'F0_y'), ...
         {'f_m_y', 'f_Fc_y', 'f_dFb_y', 'f_vb_y'}), ...
-    axis_def('z', 'lin', 'tau_z', 'pos_z', 0.008/(2*pi), 'const', ...
+    axis_def('z', 'lin', 'tau_z', 'pos_z', r_screw, 'const', ...
         struct('mass', 'm_z', 'Fc', 'Fc_z', 'Fbrk', 'Fb_z', 'visc', 'vb_z', 'vbrk', 'vbrk_z', 'offset', 'Fg_z'), {}), ...
     axis_def('a', 'rot', 'tau_a', 'pos_a', 1, 'sincos', ...
         struct('mass', 'J_a', 'Fc', 'Tc_a', 'Fbrk', 'Tb_a', 'visc', 'bv_a', 'vbrk', 'vbrk_a', 'offset', 'T0_a', ...
