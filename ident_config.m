@@ -21,12 +21,11 @@ if useSynthetic
 else
     cfg.data = struct('torque', {}, 'feedback', {}, 'use', {});
     % CSVs made by logs-plots/trace_to_ident.py from the TRACE exports (t, tau_*, pos_*, vel_*)
-    % cfg.data(end+1) = struct('torque', 'data/IDEN_X_1.csv', 'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_X_1.csv',      'feedback', '', 'use', 'fit');
     % cfg.data(end+1) = struct('torque', 'data/IDEN_Y_1.csv', 'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_FRIC_1.csv', 'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_DYN_1.csv',  'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_X_VAL_1.csv',  'feedback', '', 'use', 'val');
-    cfg.data(end+1) = struct('torque', 'data/IDEN_Y_1.csv',      'feedback', '', 'use', 'val');
     cfg.data(end+1) = struct('torque', 'data/IDEN_Y_FRIC_1.csv', 'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_Y_DYN_1.csv',  'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_Y_VAL_1.csv',  'feedback', '', 'use', 'val');

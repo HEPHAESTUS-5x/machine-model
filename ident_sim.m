@@ -23,7 +23,7 @@ cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
 % mdls = {'machine_x', 'machine_y', 'machine_z'};   % <<< models to refine, one after the other
-mdls = 'machine_x'
+mdls = {'machine_x'};
 
 cfg = ident_config();
 for im = 1:numel(mdls)
@@ -112,7 +112,7 @@ r0 = resFcn(x0, ctx);
 ctx.nres = numel(r0);
 fprintf('Initial cost: %.5g\n', sum(r0.^2));
 opts = optimoptions('lsqnonlin', 'Display', 'iter', 'FiniteDifferenceStepSize', 1e-2, ...
-    'FunctionTolerance', 1e-6, 'StepTolerance', 1e-4, 'MaxIterations', 30);
+    'FunctionTolerance', 1e-6, 'StepTolerance', 1e-4, 'MaxIterations', 15);
 [x, resnorm, res, ~, ~, ~, J] = lsqnonlin(@(s) resFcn(s, ctx), x0, ...
     cfg.sim.bounds(1) * x0, cfg.sim.bounds(2) * x0, opts);
 sigma2 = resnorm / max(numel(res) - numel(x), 1);
@@ -162,6 +162,10 @@ end   % models
 
 % =====================================================================
 function [r, sims] = resFcn(s, c)
+persistent nEval
+if isempty(nEval), nEval = 0; end
+nEval = nEval + 1;
+tEval = tic;
 r    = [];
 sims = cell(1, numel(c.X));
 for e = 1:numel(c.X)
@@ -169,7 +173,10 @@ for e = 1:numel(c.X)
     in = Simulink.SimulationInput(c.mdl);
     in = in.setExternalInput(E.u);
     % setExternalInput already switches LoadExternalInput on: do not set it again
+    % variable-step stiff solver (Simscape default): the model's fixed step of 0.1 ms
+    % made one evaluation take many minutes
     in = in.setModelParameter('StopTime', num2str(E.t(end)), ...
+        'SolverType', 'Variable-step', 'Solver', 'ode23t', 'MaxStep', '2e-3', 'RelTol', '1e-3', ...
         'SaveOutput', 'on', 'OutputSaveName', 'yout', 'SaveFormat', 'Dataset');
     for i = 1:numel(c.free)
         in = in.setVariable(c.free{i}, s(i) * c.base(i));
@@ -212,6 +219,7 @@ for e = 1:numel(c.X)
     end
     sims{e} = struct('Ps', Ps, 'Vs', Vs);
 end
+fprintf('  evaluation %d: %.0f s, cost %.4g\n', nEval, toc(tEval), sum(r.^2));
 end
 
 function v = rms_nan(x)

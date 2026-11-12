@@ -5,8 +5,10 @@
 
 %% ---------------- Axis Y ----------------
 m_y0   = 80;            % kg     effective mass         (placeholder)
-k_y0   = 2e6;           % N/m    coupling stiffness     (placeholder)
-c_y0   = 800;           % N*s/m  coupling damping       (placeholder)
+k_y0   = 2e8;           % N/m    coupling stiffness     (placeholder: ball screw drive 1e8-4e8 N/m)
+c_y0   = 1.5e5;         % N*s/m  coupling damping       (placeholder: damping ratio ~0.1 with ~2.8 t)
+% (2e6 / 800 gave a 4 Hz resonance with damping ratio 0.005: the simulated axis rang
+%  for seconds after every move and ident_sim could not fit anything)
 Fc_y0  = 150;           % N      Coulomb force          (placeholder)
 dFb_y0 = 0.2*Fc_y0;     % N      breakaway excess over Coulomb (placeholder)
 vb_y0  = 500;           % N*s/m  viscous coefficient    (placeholder)
@@ -20,7 +22,7 @@ m_z0 = 30;   k_z0 = 1e6;   c_z0 = 400;
 f_m_z = 1;   f_k_z = 1;    f_c_z = 1;
 
 %% ---------------- Axis X ----------------
-m_x0 = 50;   k_x0 = 1e6;   c_x0 = 500;
+m_x0 = 50;   k_x0 = 2e8;   c_x0 = 1.7e5;   % k, c placeholders: 37 Hz, damping ratio ~0.1 with 3.7 t (was 1e6/500: 2.6 Hz, 0.004)
 f_m_x = 1;   f_k_x = 1;    f_c_x = 1;
 
 %% ---------------- Rotary axes ----------------

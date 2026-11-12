@@ -17,6 +17,10 @@ fmu_test/
 identified_params_2*.m
 ident_rigid_*.fig
 ident_sim_*.fig
+ident_simcl_*.fig
+plots_simcl/
+# test bench rebuilt by ident_sim_cl at every run (copy of machine_x/y/z + virtual controller)
+harness_*.slx
 data_synthetic/
 
 # Files waiting to be deleted by hand (cleanup_machine_model.sh)
