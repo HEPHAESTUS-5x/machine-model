@@ -1,5 +1,6 @@
 # Simulink / MATLAB caches, autosaves and backups (regenerated or local only)
 slprj/
+slprj/sim
 *.slxc
 *.asv
 *.autosave
@@ -30,3 +31,7 @@ _to_delete/
 plots_fwd/
 _backup/
 fix*
+
+# Simscape build cache of the LuGre components (lugre_lib.slx itself is kept: the models link to it)
+sscprj/
++lugre/sscprj/

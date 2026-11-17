@@ -25,12 +25,14 @@ addpath(fullfile(here, 'ident_lib'));
 mdls      = {'machine_y'};   % <<< machine_x, machine_y, machine_z (one after the other)
 checkOnly = false;            % <<< true: quick check (first 30 s of every recording, no fit); false: identification
 fbw       = 10;              % [Hz] bandwidth of the virtual position loop (below the 37 Hz coupling)
-startFile = 'identified_params_20261113_1002.m';  % <<< '' = start from identified_params_latest.m;
+startFile = '';              % <<< '' = start from identified_params_latest.m;
                              % or an older identified_params_*.m to start from (its values override the latest).
                              % Set here because the 10:18 Z run (gravity with the wrong sign in machine_z)
                              % wrote wrong Z values; 20261113_1002 has the good ones (X, Y refined, Z rigid).
-vfit      = 20;              % [mm/min or deg/min] samples slower than this are left out of the fit:
-                             % stick and pre-sliding, which a static friction law cannot reproduce
+vfit      = 0;               % [mm/min or deg/min] samples slower than this are left out of the fit.
+                             % 0 with the LuGre friction (fix_models_v3): stick and pre-sliding are in the model
+                             % and they are what identifies xps. 20 with the static friction (friction_model('static')),
+                             % which cannot reproduce them.
 decim     = 10;              % residual: 1 sample in 10 (20 ms), less correlated
 
 cfg = ident_config();
@@ -131,15 +133,24 @@ if ~checkOnly
     ctx.nres = numel(r0);
     opts = optimoptions('lsqnonlin', 'Display', 'iter', 'FiniteDifferenceStepSize', 1e-2, ...
         'FunctionTolerance', 1e-6, 'StepTolerance', 1e-4, 'MaxIterations', 15);
-    [x, resnorm, res, ~, ~, ~, J] = lsqnonlin(@(s) resFcn(s, ctx), x0, ...
-        cfg.sim.bounds(1) * x0, cfg.sim.bounds(2) * x0, opts);
+    lb = cfg.sim.bounds(1) * x0;
+    ub = cfg.sim.bounds(2) * x0;
+    if isfield(cfg.sim, 'boundsVar')            % wider bounds for single variables (e.g. xps_*)
+        for i = 1:numel(free)
+            if isfield(cfg.sim.boundsVar, free{i})
+                lb(i) = cfg.sim.boundsVar.(free{i})(1);
+                ub(i) = cfg.sim.boundsVar.(free{i})(2);
+            end
+        end
+    end
+    [x, resnorm, res, ~, ~, ~, J] = lsqnonlin(@(s) resFcn(s, ctx), x0, lb, ub, opts);
     sigma2 = resnorm / max(numel(res) - numel(x), 1);
     se = sqrt(abs(diag(sigma2 * pinv(full(J' * J))))).';
 
     fprintf('\n%-10s %12s %8s %12s %10s\n', 'variable', 'start', 'scale', 'identified', 'se');
     for i = 1:numel(x)
         flag = '';
-        if abs(x(i) - cfg.sim.bounds(1)) < 1e-3 || abs(x(i) - cfg.sim.bounds(2)) < 1e-3
+        if abs(x(i) - lb(i)) < 1e-3 || abs(x(i) - ub(i)) < 1e-3
             flag = '<- AT THE BOUND: check the model or the rigid result';
         end
         fprintf('%-10s %12.5g %8.4f %12.5g %10.3g  %s\n', free{i}, base(i), x(i), base(i) * x(i), base(i) * se(i), flag);

@@ -121,8 +121,12 @@ cfg.sim.models = struct( ...
     'name',   {'machine_x', 'machine_y', 'machine_z'}, ...
     'inputs', {{'x', 'a', 'c'}, {'y'}, {'z'}}, ...
     'posOut', {[2 3 4], 2, 1}, ...
-    'free',   {{'m_x', 'Fc_x', 'bv_x'}, {'f_m_y', 'f_Fc_y', 'f_vb_y'}, {'m_z', 'Fc_z', 'vb_z', 'Fg_z'}});
+    'free',   {{'m_x', 'Fc_x', 'bv_x', 'xps_x'}, {'f_m_y', 'f_Fc_y', 'f_vb_y', 'xps_y'}, {'m_z', 'Fc_z', 'vb_z', 'Fg_z', 'xps_z'}});
+% xps_* (pre-sliding of the LuGre friction, fix_models_v3): remove them from 'free' if the
+% models use the static friction (friction_model('static')): there they do nothing.
 cfg.sim.bounds = [0.5 2];   % bounds on the scale factors
+% wider bounds for single variables (scale factors): the pre-sliding is known only to an order of magnitude
+cfg.sim.boundsVar = struct('xps_x', [0.1 10], 'xps_y', [0.1 10], 'xps_z', [0.1 10]);
 cfg.sim.wPos   = 0;         % weight of the position error (0 = velocity only; position drifts in open loop)
 end
 

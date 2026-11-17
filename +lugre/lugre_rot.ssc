@@ -1,0 +1,63 @@
+component lugre_rot
+% LuGre Rotational Friction
+% Friction with pre-sliding (LuGre model) between ports R and C.
+% In steady sliding the torque equals the law of the Simscape Rotational
+% Friction block (Stribeck + Coulomb + viscous), so the static parameters
+% identified by ident_rigid are used unchanged:
+%   T_ss = sign(w)*(Tc + sqrt(2e)*(Tbrk-Tc)*exp(-(w/wSt)^2)*|w|/wSt) + bv*w
+%   wSt = sqrt(2)*wbrk
+% Bristle deflection z (pre-sliding):
+%   dz/dt = w - sigma0*|w|*z/g(w),   T = sigma0*z + sigma1*dz/dt + bv*w
+%   sigma0 = Tc/xps         xps: pre-sliding angle at the Coulomb torque
+%   sigma1 = 2*zb*sqrt(sigma0*J)   zb: damping ratio of the bristles on the inertia J
+% At rest the block holds any torque |T| < Tc with a rotation |T|/sigma0.
+
+    nodes
+        R = foundation.mechanical.rotational.rotational; % R:left
+        C = foundation.mechanical.rotational.rotational; % C:right
+    end
+
+    parameters
+        Tbrk = {10, 'N*m'};        % Breakaway friction torque
+        wbrk = {0.01, 'rad/s'};    % Breakaway friction velocity
+        Tc   = {8, 'N*m'};         % Coulomb friction torque
+        bv   = {1, 'N*m*s/rad'};   % Viscous friction coefficient
+        xps  = {5e-5, 'rad'};      % Pre-sliding angle at the Coulomb torque
+        zb   = {1, '1'};           % Damping ratio of the bristles
+        J    = {1, 'kg*m^2'};      % Inertia (sets the bristle damping)
+    end
+
+    parameters (Access = private)
+        sigma0 = Tc/xps;                              % Bristle stiffness
+        sigma1 = 2*zb*sqrt(sigma0*J/{1, 'rad'});      % Bristle damping [N*m*s/rad]
+        wSt    = sqrt(2)*wbrk;                        % Stribeck velocity threshold
+        kS     = sqrt(2*exp(1));                      % Peak factor of the Stribeck term
+    end
+
+    variables
+        w = {0, 'rad/s'};                                    % Angular velocity
+        t = {0, 'N*m'};                                      % Torque
+        z = {value = {0, 'rad'}, priority = priority.high};  % Bristle deflection
+    end
+
+    branches
+        t : R.t -> C.t;
+    end
+
+    intermediates
+        g  = Tc + kS*(Tbrk - Tc)*exp(-(w/wSt)^2)*abs(w)/wSt;
+        dz = w - sigma0*abs(w)*z/g;
+    end
+
+    equations
+        assert(Tc > 0)
+        assert(Tbrk > 0)
+        assert(wbrk > 0)
+        assert(xps > 0)
+        assert(zb >= 0)
+        assert(J > 0)
+        w == R.w - C.w;
+        z.der == dz;
+        t == sigma0*z + sigma1*dz + bv*w;
+    end
+end

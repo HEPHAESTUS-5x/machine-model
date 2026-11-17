@@ -70,3 +70,14 @@ G_a = 0;   Gc_a = 0;   T0_a = 0;
 q0_a = -3781.342*pi/180;
 % constant offsets found by the rigid fit (fix_models_v2 puts them in the models)
 F0_x = 0;   F0_y = 0;   T0_c = 0;
+
+%% ---------------- Dynamic friction (LuGre, fix_models_v3) ----------------
+% Same static law as before (Fc, Fb, bv, vbrk) plus the pre-sliding:
+%   xps = displacement at the Coulomb force while the axis is "stuck"
+%         (bristle stiffness sigma0 = Fc/xps). Linear axes: a few micrometres;
+%         rotary axes: table side, 5e-5 rad = 10 arcsec. Refined by ident_sim_cl.
+%   zb  = damping ratio of the bristles on the moving mass (sigma1 = 2*zb*sqrt(sigma0*m)); not identified.
+% Switch between LuGre and the static blocks with friction_model('lugre' / 'static').
+xps_x = 5e-6;   xps_y = 5e-6;   xps_z = 5e-6;   % m
+xps_a = 5e-5;   xps_c = 5e-5;                   % rad
+zb_x = 1;   zb_y = 1;   zb_z = 1;   zb_a = 1;   zb_c = 1;

@@ -1,0 +1,66 @@
+component lugre_trans
+% LuGre Translational Friction
+% Friction with pre-sliding (LuGre model) between ports R and C.
+% In steady sliding the force equals the law of the Simscape Translational
+% Friction block (Stribeck + Coulomb + viscous), so the static parameters
+% identified by ident_rigid are used unchanged:
+%   F_ss = sign(v)*(Fc + sqrt(2e)*(Fbrk-Fc)*exp(-(v/vSt)^2)*|v|/vSt) + bv*v
+%   vSt = sqrt(2)*vbrk
+% Bristle deflection z (pre-sliding):
+%   dz/dt = v - sigma0*|v|*z/g(v),   F = sigma0*z + sigma1*dz/dt + bv*v
+%   g(v)  = Fc + sqrt(2e)*(Fbrk-Fc)*exp(-(v/vSt)^2)*|v|/vSt
+%   sigma0 = Fc/xps         xps: pre-sliding displacement at the Coulomb force
+%   sigma1 = 2*zb*sqrt(sigma0*m)   zb: damping ratio of the bristles on the mass m
+% At rest the block holds any force |F| < Fc with a displacement |F|/sigma0
+% (the static Translational Friction block cannot hold a force at v = 0).
+
+    nodes
+        R = foundation.mechanical.translational.translational; % R:left
+        C = foundation.mechanical.translational.translational; % C:right
+    end
+
+    parameters
+        Fbrk = {1000, 'N'};     % Breakaway friction force
+        vbrk = {1e-3, 'm/s'};   % Breakaway friction velocity
+        Fc   = {900, 'N'};      % Coulomb friction force
+        bv   = {5000, 'N*s/m'}; % Viscous friction coefficient
+        xps  = {5e-6, 'm'};     % Pre-sliding displacement at the Coulomb force
+        zb   = {1, '1'};        % Damping ratio of the bristles
+        m    = {1000, 'kg'};    % Moving mass (sets the bristle damping)
+    end
+
+    parameters (Access = private)
+        sigma0 = Fc/xps;                  % Bristle stiffness
+        sigma1 = 2*zb*sqrt(sigma0*m);     % Bristle damping
+        vSt    = sqrt(2)*vbrk;            % Stribeck velocity threshold
+        kS     = sqrt(2*exp(1));          % Peak factor of the Stribeck term
+    end
+
+    variables
+        v = {0, 'm/s'};                                    % Velocity
+        f = {0, 'N'};                                      % Force
+        z = {value = {0, 'm'}, priority = priority.high};  % Bristle deflection
+    end
+
+    branches
+        f : R.f -> C.f;
+    end
+
+    intermediates
+        % g >= min(Fc, Fbrk) > 0 for any v, also if Fbrk < Fc
+        g  = Fc + kS*(Fbrk - Fc)*exp(-(v/vSt)^2)*abs(v)/vSt;
+        dz = v - sigma0*abs(v)*z/g;
+    end
+
+    equations
+        assert(Fc > 0)
+        assert(Fbrk > 0)
+        assert(vbrk > 0)
+        assert(xps > 0)
+        assert(zb >= 0)
+        assert(m > 0)
+        v == R.v - C.v;
+        z.der == dz;
+        f == sigma0*z + sigma1*dz + bv*v;
+    end
+end
