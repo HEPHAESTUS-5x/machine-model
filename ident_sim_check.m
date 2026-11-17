@@ -11,8 +11,8 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
-mdl  = 'machine_x';        % <<< machine_x, machine_y or machine_z
-rec  = 'IDEN_X_DYN_1';     % <<< a recording where that axis moves
+mdl  = 'machine_y';        % <<< machine_x, machine_y or machine_z
+rec  = 'IDEN_Y_DYN_1';     % <<< a recording where that axis moves
 tsim = 30;                 % <<< seconds simulated (from the first rest)
 
 cfg = ident_config();

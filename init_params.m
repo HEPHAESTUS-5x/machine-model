@@ -18,7 +18,10 @@ f_m_y = 1;  f_k_y = 1;  f_c_y = 1;
 f_Fc_y = 1;  f_dFb_y = 1;  f_vb_y = 1;
 
 %% ---------------- Axis Z ----------------
-m_z0 = 30;   k_z0 = 1e6;   c_z0 = 400;
+% Z: the spring and damper are ROTATIONAL (before the leadscrew). Same axial stiffness and
+% damping as X, Y: 2e8 N/m and 1.2e5 N*s/m reflected through r = 20 mm/(2*pi)
+% (was 1e6 N*m/rad = 1e11 N/m, 1.2 kHz, and 400 N*m*s/rad = 4e7 N*s/m: strongly overdamped and stiff)
+m_z0 = 30;   k_z0 = 2e8*(0.020/(2*pi))^2;   c_z0 = 1.2e5*(0.020/(2*pi))^2;
 f_m_z = 1;   f_k_z = 1;    f_c_z = 1;
 
 %% ---------------- Axis X ----------------
@@ -26,9 +29,12 @@ m_x0 = 50;   k_x0 = 2e8;   c_x0 = 1.7e5;   % k, c placeholders: 37 Hz, damping r
 f_m_x = 1;   f_k_x = 1;    f_c_x = 1;
 
 %% ---------------- Rotary axes ----------------
-J_a0 = 0.5;  k_a0 = 1e5;   c_a0 = 50;
+% TABLE side since fix_models_v2 (gearboxes A1 2880/37, C1 642/7 in machine_x).
+% J includes the reflected motor inertia; placeholders until ident_rigid, from a first look at the
+% A and C recordings. k, c: first mode ~40 Hz, damping ratio ~0.1 (placeholders, not identified).
+J_a0 = 150;  k_a0 = 1e7;   c_a0 = 8e3;
 f_J_a = 1;   f_k_a = 1;    f_c_a = 1;
-J_c0 = 0.8;  k_c0 = 1e5;   c_c0 = 80;
+J_c0 = 25;   k_c0 = 1.6e6; c_c0 = 1.3e3;
 f_J_c = 1;   f_k_c = 1;    f_c_c = 1;
 
 %% ---------------- Derived values (used by blocks that still contain plain names) ----------------
@@ -52,8 +58,15 @@ Fc_z = 200;   Fb_z = 1.2*Fc_z;   vb_z = 1000;   vbrk_z = 2e-3;
 % Z gravity as its own force: m_z also holds the reflected rotor inertia
 Fg_z = m_z*9.81;
 % A and C friction (Rotational Friction blocks added by fix_model_for_ident)
-Tc_a = 5;     Tb_a = 1.2*Tc_a;   bv_a = 1;      vbrk_a = 0.01;
-Tc_c = 5;     Tb_c = 1.2*Tc_c;   bv_c = 1;      vbrk_c = 0.01;
-% A gravity: motor torque needed = G_a*sin(a); the model's Gain4 is -G_a
-% (2.94 = the value Gain4 had before fix_model_for_ident; = m_plate*9.81*l_cg)
-G_a = 2.94;
+% table side (motor-side values / gear ratio), placeholders until ident_rigid
+Tc_a = 230;   Tb_a = 1.2*Tc_a;   bv_a = 350;    vbrk_a = 0.01;
+Tc_c = 110;   Tb_c = 1.2*Tc_c;   bv_c = 100;    vbrk_c = 0.01;
+% A gravity (fix_models_v2): load torque = -(G_a*sin(a+q0_a) + Gc_a*cos(a+q0_a) + T0_a)
+%   a    = model angle, starts from 0 [rad]
+%   q0_a = absolute A angle at the start of the recordings (IDEN_A_*: -3781.342 deg in the TRACE)
+% G_a, Gc_a, T0_a come from ident_rigid with the same absolute angle, so they fit together.
+% (the old G_a = 2.94 was motor-side and is not valid with the gearbox)
+G_a = 0;   Gc_a = 0;   T0_a = 0;
+q0_a = -3781.342*pi/180;
+% constant offsets found by the rigid fit (fix_models_v2 puts them in the models)
+F0_x = 0;   F0_y = 0;   T0_c = 0;

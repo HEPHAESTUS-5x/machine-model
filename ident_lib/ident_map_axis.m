@@ -16,11 +16,11 @@ switch A.gravity
     case 'const'
         add('offset', R.thM(5), R.seM(5), 'constant force at the motor side = gravity (replaces m*g)');
     otherwise
-        add('offset', R.thM(5), R.seM(5), 'constant offset (not in the model: asymmetric friction or torque offset)');
+        add('offset', R.thM(5), R.seM(5), 'constant offset (asymmetric friction or torque offset; in the model since fix_models_v2)');
 end
 if strcmp(A.gravity, 'sincos')
-    add('gsin', R.thM(6), R.seM(6), 'gravity: motor torque += G*sin(q); model gain = -G');
-    add('gcos', R.thM(7), R.seM(7), 'gravity: motor torque += Gc*cos(q); not in the model yet');
+    add('gsin', R.thM(6), R.seM(6), 'gravity: motor torque += G*sin(q) (machine_x: block A gravity)');
+    add('gcos', R.thM(7), R.seM(7), 'gravity: motor torque += Gc*cos(q) (machine_x: block A gravity)');
 end
 for k = 1:numel(A.reset)
     names{end+1} = A.reset{k}; %#ok<AGROW>

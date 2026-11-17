@@ -33,6 +33,12 @@ else
     cfg.data(end+1) = struct('torque', 'data/IDEN_Z_FRIC_1.csv', 'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_Z_DYN_1.csv',  'feedback', '', 'use', 'fit');
     cfg.data(end+1) = struct('torque', 'data/IDEN_Z_VAL_1.csv',  'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_A_FRIC_1.csv', 'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_A_DYN_1.csv',  'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_A_VAL_1.csv',  'feedback', '', 'use', 'val');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_C_FRIC_1.csv', 'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_C_DYN_1.csv',  'feedback', '', 'use', 'fit');
+    cfg.data(end+1) = struct('torque', 'data/IDEN_C_VAL_1.csv',  'feedback', '', 'use', 'val');
     % one line per recording (keep the CSVs in data/), e.g.
     % cfg.data(end+1) = struct('torque', 'data/IDENT_Y_1_torque.csv', 'feedback', 'data/IDENT_Y_1_feedback.csv', 'use', 'fit');
     % cfg.data(end+1) = struct('torque', 'data/IDENT_Y_2_torque.csv', 'feedback', 'data/IDENT_Y_2_feedback.csv', 'use', 'val');
@@ -56,7 +62,9 @@ cfg.filt.parallel = 21;   % frame of the smoothing applied to torque and regress
 cfg.filt.decimate = 10;   % keep 1 sample in N after filtering (less correlated residuals)
 
 %% ---------------- Rigid fit (ident_rigid) ----------------
-cfg.rigid.axes         = {'x', 'y', 'z', 'a', 'c'};  % an axis that never moves is skipped
+cfg.rigid.axes         = {'a', 'c'};   % <<< axes to fit. X, Y, Z are done and refined by ident_sim_cl:
+                                       %     putting them back here OVERWRITES the refined values with the rigid ones
+% cfg.rigid.axes       = {'x', 'y', 'z', 'a', 'c'};  % all (an axis that never moves is skipped)
 cfg.rigid.tmin_plateau = 0.2;   % [s] shortest constant-velocity plateau shown in the friction plot
 cfg.rigid.outlier      = 5;     % residuals beyond this many robust sigmas are dropped once
 
@@ -66,7 +74,10 @@ cfg.rigid.outlier      = 5;     % residuals beyond this many robust sigmas are d
 %             read on the machine 2026-11-12; MD32000 = 40000 mm/min = 2000 rpm, MD32100 = -1
 %             THE SIMSCAPE MODELS MUST USE THE SAME r: X, Y: Gear Box ratio 1 and Wheel and Axle R = 20/(2*pi) mm;
 %             Z: Leadscrew lead 20 mm.
-%   A, C : the motor torque acts directly on the inertia        ->  r = 1
+%   A, C : gearbox, table turns per motor turn (MD31050/31060, read on the machine):
+%          A1 37/2880, C1 7/642                                ->  r = 37/2880, 7/642 [rad/rad]
+%          so J, Tc, Tb, bv, G are TABLE-side values (J includes the reflected motor inertia).
+%          THE SIMSCAPE MODEL (machine_x) MUST HAVE THE SAME GEARBOXES before ident_sim_cl / validate_fwd on A, C.
 % r converts the fitted coefficients (motor torque per unit of load motion)
 % into the parameters of the blocks. It must match the MODEL. Check the model
 % against the real machine data (MD31030 leadscrew pitch, MD31050/MD31060
@@ -80,9 +91,11 @@ cfg.rigid.outlier      = 5;     % residuals beyond this many robust sigmas are d
 %   Fc    Coulomb force/torque              Fbrk  breakaway force (total)
 %   dFb   breakaway excess over Coulomb      visc  viscous coefficient
 %   vbrk  breakaway velocity                 offset constant force (gravity on Z)
-%   gsin, gcos  gravity torque coefficients (A); the model applies -G_a*sin(a)
+%   gsin, gcos  gravity torque coefficients (A); the model applies -(G_a*sin(a+q0_a) + Gc_a*cos(a+q0_a) + T0_a)
 % reset: multipliers set back to 1, because the nominal now holds the identified value.
 r_screw = 0.020/(2*pi);   % [m/rad] ball screw lead 20 mm, direct drive (same on X, Y, Z)
+r_a = 37/2880;            % [rad/rad] A1 gearbox, table turns per motor turn
+r_c = 7/642;              % [rad/rad] C1 gearbox
 cfg.axes = [ ...
     axis_def('x', 'lin', 'tau_x', 'pos_x', r_screw, 'none', ...
         struct('mass', 'm_x', 'Fc', 'Fc_x', 'Fbrk', 'Fb_x', 'visc', 'bv_x', 'vbrk', 'vbrk_x', 'offset', 'F0_x'), {}), ...
@@ -91,10 +104,10 @@ cfg.axes = [ ...
         {'f_m_y', 'f_Fc_y', 'f_dFb_y', 'f_vb_y'}), ...
     axis_def('z', 'lin', 'tau_z', 'pos_z', r_screw, 'const', ...
         struct('mass', 'm_z', 'Fc', 'Fc_z', 'Fbrk', 'Fb_z', 'visc', 'vb_z', 'vbrk', 'vbrk_z', 'offset', 'Fg_z'), {}), ...
-    axis_def('a', 'rot', 'tau_a', 'pos_a', 1, 'sincos', ...
+    axis_def('a', 'rot', 'tau_a', 'pos_a', r_a, 'sincos', ...
         struct('mass', 'J_a', 'Fc', 'Tc_a', 'Fbrk', 'Tb_a', 'visc', 'bv_a', 'vbrk', 'vbrk_a', 'offset', 'T0_a', ...
                'gsin', 'G_a', 'gcos', 'Gc_a'), {}), ...
-    axis_def('c', 'rot', 'tau_c', 'pos_c', 1, 'none', ...
+    axis_def('c', 'rot', 'tau_c', 'pos_c', r_c, 'none', ...
         struct('mass', 'J_c', 'Fc', 'Tc_c', 'Fbrk', 'Tb_c', 'visc', 'bv_c', 'vbrk', 'vbrk_c', 'offset', 'T0_c'), {})];
 
 %% ---------------- Simulation refinement (ident_sim) ----------------

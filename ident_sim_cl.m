@@ -22,9 +22,13 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
-mdls      = {'machine_x'};   % <<< machine_x, machine_y, machine_z (one after the other)
-checkOnly = false;           % <<< true: quick check (first 30 s of every recording, no fit); false: identification
+mdls      = {'machine_y'};   % <<< machine_x, machine_y, machine_z (one after the other)
+checkOnly = false;            % <<< true: quick check (first 30 s of every recording, no fit); false: identification
 fbw       = 10;              % [Hz] bandwidth of the virtual position loop (below the 37 Hz coupling)
+startFile = 'identified_params_20261113_1002.m';  % <<< '' = start from identified_params_latest.m;
+                             % or an older identified_params_*.m to start from (its values override the latest).
+                             % Set here because the 10:18 Z run (gravity with the wrong sign in machine_z)
+                             % wrote wrong Z values; 20261113_1002 has the good ones (X, Y refined, Z rigid).
 vfit      = 20;              % [mm/min or deg/min] samples slower than this are left out of the fit:
                              % stick and pre-sliding, which a static friction law cannot reproduce
 decim     = 10;              % residual: 1 sample in 10 (20 ms), less correlated
@@ -41,6 +45,10 @@ stamp = datestr(now, 'yyyymmdd_HHMM'); %#ok<TNOW1,DATST>
 init_params;
 if exist('identified_params_latest.m', 'file')
     identified_params_latest;
+end
+if ~isempty(startFile)
+    fprintf('Start values from %s\n', startFile);
+    run(startFile);
 end
 free = M.free;
 base = zeros(1, numel(free));
@@ -159,16 +167,25 @@ for e = 1:numel(X)
         grid on;
         ylabel(sprintf('tau_%s [N*m]', Ax(j).name));
         wj = X(e).w(:, j);                 % rms over the samples used in the fit (moving)
+        lab = '';
+        if ~any(wj)                        % e.g. the first 30 s of FRIC: all slower than vfit
+            wj(:) = true;
+            lab = ' [no samples above vfit here: rms over all samples]';
+        end
         eB = sqrt(mean(simB{e}.tc(wj, j).^2)); eA = sqrt(mean(simA{e}.tc(wj, j).^2));
         title(sprintf('%s (%s), axis %s: rms missing torque (moving, > vfit) %.3g -> %.3g N*m (rms of the torque %.3g)', ...
             X(e).name, X(e).use, upper(Ax(j).name), eB, eA, sqrt(mean(X(e).tau(:, j).^2))), 'Interpreter', 'none');
         if checkOnly, legend('measured', 'model needs');
         else, legend('measured', 'model needs, before', 'model needs, after'); end
-        fprintf('%s %s axis %s: rms missing torque %.3g N*m (torque rms %.3g), max position error %.3g\n', ...
-            X(e).name, X(e).use, upper(Ax(j).name), eA, sqrt(mean(X(e).tau(:, j).^2)), simA{e}.pe(j));
+        fprintf('%s %s axis %s: rms missing torque %.3g N*m (torque rms %.3g), max position error %.3g%s\n', ...
+            X(e).name, X(e).use, upper(Ax(j).name), eA, sqrt(mean(X(e).tau(:, j).^2)), simA{e}.pe(j), lab);
     end
     xlabel('t [s]');
     if ~checkOnly, savefig(f, sprintf('ident_simcl_%s_%s_%s.fig', mdl, X(e).name, stamp)); end
+end
+% data of the plots (for export_simcl_png: missing torque against speed, any time later)
+if ~checkOnly
+    save(sprintf('ident_simcl_%s_%s.mat', mdl, stamp), 'X', 'simA', 'simB', 'n', 'Ax', 'mdl', '-v7');
 end
 end   % models
 
