@@ -121,12 +121,17 @@ cfg.sim.models = struct( ...
     'name',   {'machine_x', 'machine_y', 'machine_z'}, ...
     'inputs', {{'x', 'a', 'c'}, {'y'}, {'z'}}, ...
     'posOut', {[2 3 4], 2, 1}, ...
-    'free',   {{'m_x', 'Fc_x', 'bv_x', 'xps_x'}, {'f_m_y', 'f_Fc_y', 'f_vb_y', 'xps_y'}, {'m_z', 'Fc_z', 'vb_z', 'Fg_z', 'xps_z'}});
+    'free',   {{'xps_x', 'zb_x'}, {'xps_y', 'zb_y'}, {'xps_z', 'zb_z'}});
+% X: m, Fc, bv fixed at the static-friction values (20261112_2139, restore_static_x.m); only the LuGre
+%    parameters xps_x, zb_x are fitted, on IDEN_X_FRIC_1 only, all samples (fitFiles, vfit = 0 in ident_sim_cl).
+% Y: same: m, Fc, bv stay at the static-friction values (20261113_1038), only xps_y, zb_y on IDEN_Y_FRIC_1.
+% Z: same: m, Fc, bv, Fg stay at the static-friction values (20261113_1027), only xps_z, zb_z on IDEN_Z_FRIC_1.
+% Y, Z: first a run with xps free and vfit = 0, then remove xps and re-fit with vfit = 20 (same as X).
 % xps_* (pre-sliding of the LuGre friction, fix_models_v3): remove them from 'free' if the
 % models use the static friction (friction_model('static')): there they do nothing.
 cfg.sim.bounds = [0.5 2];   % bounds on the scale factors
 % wider bounds for single variables (scale factors): the pre-sliding is known only to an order of magnitude
-cfg.sim.boundsVar = struct('xps_x', [0.1 10], 'xps_y', [0.1 10], 'xps_z', [0.1 10]);
+cfg.sim.boundsVar = struct('xps_x', [0.1 10], 'xps_y', [0.1 10], 'xps_z', [0.1 10], 'zb_x', [0.05 2], 'zb_y', [0.05 2], 'zb_z', [0.05 2]);
 cfg.sim.wPos   = 0;         % weight of the position error (0 = velocity only; position drifts in open loop)
 end
 

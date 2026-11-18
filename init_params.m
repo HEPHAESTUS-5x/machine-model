@@ -78,6 +78,6 @@ F0_x = 0;   F0_y = 0;   T0_c = 0;
 %         rotary axes: table side, 5e-5 rad = 10 arcsec. Refined by ident_sim_cl.
 %   zb  = damping ratio of the bristles on the moving mass (sigma1 = 2*zb*sqrt(sigma0*m)); not identified.
 % Switch between LuGre and the static blocks with friction_model('lugre' / 'static').
-xps_x = 5e-6;   xps_y = 5e-6;   xps_z = 5e-6;   % m
+xps_x = 5e-6;   xps_y = 25e-6;  xps_z = 10e-6;  % m  (Y: start from the X result; Z: started away from it on purpose)
 xps_a = 5e-5;   xps_c = 5e-5;                   % rad
-zb_x = 1;   zb_y = 1;   zb_z = 1;   zb_a = 1;   zb_c = 1;
+zb_x = 1;   zb_y = 0.3; zb_z = 0.6; zb_a = 1;   zb_c = 1;   % Y: start from the X result (0.28); Z: away from it

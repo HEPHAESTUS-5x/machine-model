@@ -22,7 +22,7 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
-mdls      = {'machine_y'};   % <<< machine_x, machine_y, machine_z (one after the other)
+mdls      = {'machine_z'};   % <<< machine_x, machine_y, machine_z (one after the other)
 checkOnly = false;            % <<< true: quick check (first 30 s of every recording, no fit); false: identification
 fbw       = 10;              % [Hz] bandwidth of the virtual position loop (below the 37 Hz coupling)
 startFile = '';              % <<< '' = start from identified_params_latest.m;
@@ -34,6 +34,8 @@ vfit      = 0;               % [mm/min or deg/min] samples slower than this are 
                              % and they are what identifies xps. 20 with the static friction (friction_model('static')),
                              % which cannot reproduce them.
 decim     = 10;              % residual: 1 sample in 10 (20 ms), less correlated
+fitFiles  = {'IDEN_Z_FRIC_1'};  % <<< {} = every 'fit' recording of ident_config; otherwise only these are
+                             % used in the fit, all the others are only simulated and plotted (as validation)
 
 cfg = ident_config();
 for im = 1:numel(mdls)
@@ -89,10 +91,14 @@ fprintf('Test bench %s.slx built (virtual controller %.0f Hz)\n', h, fbw);
 %% ---------------- data ----------------
 fprintf('Loading recordings\n');
 D = ident_load(cfg);
+% only the recordings where an axis with free parameters moves: machine_x also has A and C,
+% but with free = {m_x, Fc_x, ...} their recordings only cost simulation time
+freeAx = unique(cellfun(@(s) s(end), free));
+isFreeAx = ismember({Ax.name}, cellstr(freeAx.'));
 X = struct('name', {}, 'use', {}, 'u', {}, 't', {}, 'tau', {}, 'scale', {}, 'has', {}, 'w', {});
 for e = 1:numel(D)
     has = D(e).has(axIdx);
-    if ~any(has), continue; end
+    if ~any(has & isFreeAx), continue; end
     [~, h1] = ident_sg_kernels(cfg.filt.order, cfg.filt.frame, D(e).Ts);
     P = D(e).pos(:, axIdx);
     T = D(e).tau(:, axIdx);
@@ -111,7 +117,9 @@ for e = 1:numel(D)
     wk = false(numel(kk), n);                        % samples used in the residual
     wk(1:decim:end, :) = true;
     wk = wk & abs(V(kk, :)) > vfit * su / 60;
-    X(end+1) = struct('name', D(e).name, 'use', D(e).use, 'u', [t, T(kk, :), pref], 't', t, ...
+    use = D(e).use;
+    if ~isempty(fitFiles) && ~ismember(D(e).name, fitFiles), use = 'val'; end
+    X(end+1) = struct('name', D(e).name, 'use', use, 'u', [t, T(kk, :), pref], 't', t, ...
         'tau', T(kk, :), 'scale', max(std(T(kk, :), 0, 1), 0.05), 'has', has, 'w', wk); %#ok<SAGROW>
 end
 if isempty(X), warning('ident:sim', 'no recording where the axes of %s move: skipped', mdl); continue; end

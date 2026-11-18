@@ -23,7 +23,7 @@ here = fileparts(mfilename('fullpath'));
 cd(here);
 addpath(fullfile(here, 'ident_lib'));
 
-mdls      = {'machine_x', 'machine_y', 'machine_z'};   % <<< models to validate
+mdls      = {'machine_z'};%, 'machine_y', 'machine_z'};   % <<< models to validate
 useSets   = {'val'};     % <<< 'val' = recordings not used in the fit; {'val', 'fit'} for all of them
 doFull    = true;        % <<< continuous run of the whole recording (drifts, for comparison)
 doStrokes = true;        % <<< stroke-by-stroke run

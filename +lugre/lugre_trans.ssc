@@ -26,6 +26,7 @@ component lugre_trans
         bv   = {5000, 'N*s/m'}; % Viscous friction coefficient
         xps  = {5e-6, 'm'};     % Pre-sliding displacement at the Coulomb force
         zb   = {1, '1'};        % Damping ratio of the bristles
+        veps = {1e-6, 'm/s'};   % Smoothing of |v| (no zero-crossing events at v = 0)
         m    = {1000, 'kg'};    % Moving mass (sets the bristle damping)
     end
 
@@ -47,9 +48,13 @@ component lugre_trans
     end
 
     intermediates
+        % |v| smoothed: sqrt(v^2 + veps^2) instead of abs(v). abs(v) makes the solver stop and
+        % locate every zero crossing of v (at rest v hovers around 0: very slow); veps = 1 um/s
+        % is far below every measured speed.
+        va = sqrt(v^2 + veps^2);
         % g >= min(Fc, Fbrk) > 0 for any v, also if Fbrk < Fc
-        g  = Fc + kS*(Fbrk - Fc)*exp(-(v/vSt)^2)*abs(v)/vSt;
-        dz = v - sigma0*abs(v)*z/g;
+        g  = Fc + kS*(Fbrk - Fc)*exp(-(v/vSt)^2)*va/vSt;
+        dz = v - sigma0*va*z/g;
     end
 
     equations
@@ -59,6 +64,7 @@ component lugre_trans
         assert(xps > 0)
         assert(zb >= 0)
         assert(m > 0)
+        assert(veps > 0)
         v == R.v - C.v;
         z.der == dz;
         f == sigma0*z + sigma1*dz + bv*v;

@@ -24,6 +24,7 @@ component lugre_rot
         bv   = {1, 'N*m*s/rad'};   % Viscous friction coefficient
         xps  = {5e-5, 'rad'};      % Pre-sliding angle at the Coulomb torque
         zb   = {1, '1'};           % Damping ratio of the bristles
+        veps = {1e-6, 'rad/s'};    % Smoothing of |w| (no zero-crossing events at w = 0)
         J    = {1, 'kg*m^2'};      % Inertia (sets the bristle damping)
     end
 
@@ -45,8 +46,10 @@ component lugre_rot
     end
 
     intermediates
-        g  = Tc + kS*(Tbrk - Tc)*exp(-(w/wSt)^2)*abs(w)/wSt;
-        dz = w - sigma0*abs(w)*z/g;
+        % |w| smoothed: sqrt(w^2 + veps^2) instead of abs(w) (no zero-crossing events at rest)
+        wa = sqrt(w^2 + veps^2);
+        g  = Tc + kS*(Tbrk - Tc)*exp(-(w/wSt)^2)*wa/wSt;
+        dz = w - sigma0*wa*z/g;
     end
 
     equations
@@ -56,6 +59,7 @@ component lugre_rot
         assert(xps > 0)
         assert(zb >= 0)
         assert(J > 0)
+        assert(veps > 0)
         w == R.w - C.w;
         z.der == dz;
         t == sigma0*z + sigma1*dz + bv*w;
